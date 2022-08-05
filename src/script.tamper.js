@@ -10,30 +10,68 @@
 // @require      https://gist.github.com/raw/2625891/waitForKeyElements.js
 // ==/UserScript==
 
-// Do nothing until the "branch selection" control appears
-waitForKeyElements(".new-discussion-timeline .range-editor", main);
+// Milliseconds to wait between page URL checks
+const URL_CHECK_DELAY = 111;
+
+// It has begun!
+console.log("Loaded GitHub PR Template Picker");
+
+// Poll for URL changes, both on initial page load and when it gets changed via
+// AJAX. Fortunately, GitHub always updates the URL when we move to and between
+// compare views.
+setInterval(function () {
+  if (
+    this.lastPathStr !== location.pathname ||
+    this.lastQueryStr !== location.search
+  ) {
+    this.lastPathStr = location.pathname;
+    this.lastQueryStr = location.search;
+
+    // Double check that we're on a compare page. We need to run the user script
+    // on _all_ GH domain pages because GH uses AJAX to move between pages without
+    // triggering a page load, but one ramification is that there's a slim possibility
+    // that the waitForKeyElements would match on a control that's not actually on the
+    // compare page. If so, don't start looking for the branch selection control.
+    if (!window.location.href.match("https://github.com/.*/.*/compare/.*")) {
+      return;
+    }
+
+    // Once we're on the right page, do nothing until the "branch selection" control
+    // appears. This feature requires loading jQuery via the @require tag above.
+    // Set bWaitOnce=true to stop scanning for new matches once asuccessful match
+    // is made.
+    waitForKeyElements(
+      ".new-discussion-timeline .range-editor:not(#prTemplateHolder)",
+      main,
+      true
+    );
+  }
+}, URL_CHECK_DELAY);
 
 /**
- * Put a PR template picker on the current GitHub compare page
+ * Put a PR template picker on the current GitHub compare page.
  */
-async function main() {
+function main(brancherNode) {
   "use strict";
 
-  // Return early if script has already run
-  if (document.body.dataset.gprp) return;
-  document.body.setAttribute("data-gprp", true);
+  console.log(`matched`);
+  const brancher = brancherNode[0];
 
-  // Return early if we're not currently on a compare page
-  if (!window.location.href.match("https://github.com/*/*/compare/*")) {
-    return;
-  }
+  // DON'T await here -- we need to return immediately to stop the scanning, while
+  // asynchronously building the picker and adding it to the DOM.
+  addPicker(brancher);
 
-  // Find selection control
-  const brancher = document.querySelector(
-    ".new-discussion-timeline .range-editor"
-  );
+  // Return false to tell waitForKeyElements we're all good and can stop scanning
+  // for matches.
+  return false;
+}
 
-  // Build the picker
+/**
+ * Add a PR template picker holder after the specified branch selector control
+ * @param {HTMLElement} brancher - the branch selector control after which to place the picker
+ */
+async function addPicker(brancher) {
+  // Wait for picker to be built from API call
   const holder = await picker();
 
   // Add holder after brancher
@@ -61,15 +99,19 @@ async function picker() {
   const picker = document.createElement("select");
   picker.id = "prTemplatePicker";
 
-  // TODO: do I need to await here?
+  // Fill out available template options
   const names = ["", ...(await templates())];
-  for (templateName of names) {
+  for (const templateName of names) {
     const option = document.createElement("option");
     option.value = templateName;
     option.text = templateName;
     picker.appendChild(option);
   }
 
+  // Default picker to what's currently in the URL bar
+  // May not correspond to _actual_ template being used,
+  // because the repo's default template doesn't actually
+  // show up in the URL. That's fine, though.
   picker.value = currentTemplate();
 
   // Attach handler to picker
@@ -96,13 +138,12 @@ async function templates() {
       return response;
     })
     .then((response) => response.json())
-    .then((results) =>
-      results
+    .then((results) => {
+      return results
         .map((el) => el.name)
-        .filter((el) => el.endsWith(".md") && el !== "README.md")
-    )
+        .filter((el) => el.endsWith(".md") && el !== "README.md");
+    })
     .catch((error) => {
-      console.log(`can't fetch PR templates: ${error}`);
       return [];
     });
 }
@@ -129,6 +170,7 @@ function setTemplate(template) {
     urlParams.delete("template");
   } else {
     urlParams.set("template", template);
+    urlParams.set("quick_pull", "1");
   }
 
   window.location.search = urlParams;
