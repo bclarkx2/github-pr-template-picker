@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub PR Template Picker
 // @namespace    clarknet.info
-// @version      0.1.0
+// @version      0.1.1
 // @description  Allows picking a changing the template for a PR in GitHub
 // @author       @bclarkx2
 // @match        https://github.com/*/*/compare/*
@@ -41,7 +41,7 @@ setInterval(function () {
       return;
     }
 
-    // Once we're on the right page, do nothing until the "branch selection" control
+    // Once we're on the right page, do nothing until the 'branch selection' control
     // appears. This feature requires loading jQuery via the @require tag above.
     // Set bWaitOnce=true to stop scanning for new matches once asuccessful match
     // is made.
@@ -59,7 +59,6 @@ setInterval(function () {
 function main(brancherNode) {
   "use strict";
 
-  console.log(`matched`);
   const brancher = brancherNode[0];
 
   // DON'T await here -- we need to return immediately to stop the scanning, while
@@ -143,7 +142,8 @@ async function holder() {
   const sourceButton = document.createElement("button");
   sourceButton.id = "prTemplateSourceButton";
   sourceButton.type = "submit";
-  sourceButton.value = "Save";
+  sourceButton.textContent = "Save";
+  sourceButton.classList.add("btn");
   sourceButton.addEventListener(
     "click",
     sourceButtonHandler(sourceBox, sourceButton)
