@@ -8,10 +8,15 @@
 // @match        https://github.com/*
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @require      https://gist.github.com/raw/2625891/waitForKeyElements.js
+// @grant        GM.setValue
+// @grant        GM.getValue
 // ==/UserScript==
 
 // Milliseconds to wait between page URL checks
 const URL_CHECK_DELAY = 111;
+const DEFAULT_SOURCE =
+  "https://api.github.com/repos/nicheinc/.github/contents/.github/PULL_REQUEST_TEMPLATE";
+const SOURCE_KEY = "githubPRTemplatePicker.source";
 
 // It has begun!
 console.log("Loaded GitHub PR Template Picker");
@@ -72,17 +77,20 @@ function main(brancherNode) {
  */
 async function addPicker(brancher) {
   // Wait for picker to be built from API call
-  const holder = await picker();
+  const node = await holder();
 
   // Add holder after brancher
-  brancher.parentNode.insertBefore(holder, brancher.nextSibling);
+  brancher.parentNode.insertBefore(node, brancher.nextSibling);
 }
 
 /**
  * Build a PR template picker holder
  * @returns {HTMLElement}
  */
-async function picker() {
+async function holder() {
+  // Extract PR Template source from storage
+  const source = await getSource();
+
   // Create new template picker container
   const holder = document.createElement("div");
   holder.id = "prTemplateHolder";
@@ -90,17 +98,17 @@ async function picker() {
   holder.classList.add("color-fg-muted");
   holder.classList.add("js-range-editor");
 
-  // Create the label
-  const label = document.createElement("label");
-  label.textContent = "PR Template: ";
-  holder.appendChild(label);
+  // Create the picker label
+  const pickerLabel = document.createElement("label");
+  pickerLabel.textContent = "PR Template: ";
+  holder.appendChild(pickerLabel);
 
   // Create the picker
   const picker = document.createElement("select");
   picker.id = "prTemplatePicker";
 
   // Fill out available template options
-  const names = ["", ...(await templates())];
+  const names = ["", ...(await templates(source))];
   for (const templateName of names) {
     const option = document.createElement("option");
     option.value = templateName;
@@ -120,17 +128,38 @@ async function picker() {
   // Add the picker to the holder
   holder.appendChild(picker);
 
+  // Create the source label
+  const sourceLabel = document.createElement("label");
+  sourceLabel.textContent = " Source: ";
+  holder.appendChild(sourceLabel);
+
+  const sourceBox = document.createElement("input");
+  sourceBox.id = "prTemplateSourceBox";
+  sourceBox.value = source;
+  sourceBox.type = "url";
+  sourceBox.size = 25;
+  holder.appendChild(sourceBox);
+
+  const sourceButton = document.createElement("button");
+  sourceButton.id = "prTemplateSourceButton";
+  sourceButton.type = "submit";
+  sourceButton.value = "Save";
+  sourceButton.addEventListener(
+    "click",
+    sourceButtonHandler(sourceBox, sourceButton)
+  );
+  holder.appendChild(sourceButton);
+
   return holder;
 }
 
 /**
  * Return the set of available template names
+ * @param {string} source - URL to a public GitHub PULL_REQUEST_TEMPLATE directory
  * @returns {Promise}
  */
-async function templates() {
-  return fetch(
-    "https://api.github.com/repos/nicheinc/.github/contents/.github/PULL_REQUEST_TEMPLATE"
-  )
+async function templates(source) {
+  return fetch(source)
     .then((response) => {
       if (!response.ok) {
         throw Error(response.statusText);
@@ -183,4 +212,35 @@ function setTemplate(template) {
 function currentTemplate() {
   const params = new URLSearchParams(window.location.search);
   return params.get("template");
+}
+
+/**
+ * Build a handler for a source button event.
+ * @param {HTMLElement} input - HTML input element
+ * @returns {function}
+ */
+function sourceButtonHandler(input) {
+  return async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await setSource(input.value);
+  };
+}
+
+/**
+ * Get the PR template directory source URL from storage.
+ * @returns {string}
+ * @returns {Promise}
+ */
+function getSource() {
+  return GM.getValue(SOURCE_KEY, DEFAULT_SOURCE);
+}
+
+/**
+ * Persist a new PR template directory source URL to storage.
+ * @params {string} source - the GitHub API URL to fetch PR templates from
+ * @returns {Promise}
+ */
+function setSource(source) {
+  return GM.setValue(SOURCE_KEY, source);
 }
