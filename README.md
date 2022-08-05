@@ -15,7 +15,7 @@ This project solves a simple problem:
 1. GitHub allows you to specify a set of organization-wide PR templates by
    creating a public `.github` repository under your organization to contain
    them.
-   ([docs](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-filehttps://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file). These can be used to initialize pull request descriptions with useful starting points.
+   ([docs](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-filehttps://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)). These can be used to initialize pull request descriptions with useful starting points.
 2. If you create a single `.github/pull_request_template.md` file, that will be
    used as the default template for all PRs in repositories in your organization
    that don't have their own pull request template set. Great!
