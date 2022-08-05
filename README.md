@@ -43,7 +43,7 @@ Navigate to a "compare" page on the GitHub web app (e.g.
 https://github.com/bclarkx2/github-pr-template-picker/compare/some/feature).
 
 Set the Source field to the API URL for your organization's Pull Request
-templates. The format is:
+templates and click the "Save" button. The format is:
 
 `https://api.github.com/repos/:org/.github/contents/.github/PULL_REQUEST_TEMPLATE`
 
